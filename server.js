@@ -5,7 +5,7 @@ const cors = require('cors');
 const md5 = require('md5');
 
 const app = express();
-const port = 3001;
+const port = process.env.port || 3001;
 
 // Middleware para manejar JSON
 app.use(bodyParser.json());
