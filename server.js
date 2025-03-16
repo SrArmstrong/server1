@@ -10,8 +10,6 @@ const app = express();
 app.use(bodyParser.json());
 app.use(cors()); // Habilitar CORS
 
-
-
 const db = mysql.createConnection({
   host: '69.49.241.56',
   user: 'opticlas_SergioAldavalde',
@@ -19,7 +17,6 @@ const db = mysql.createConnection({
   //password: '',
   database: 'opticlas_digitalmindworks'
 });
-
 
 db.connect((err) => {
   if (err) {
@@ -45,6 +42,27 @@ app.get('/usuarios', (req, res) => {
     });
   });
 });
+
+// Ruta para manejar la autenticación de inicio de sesión
+app.post('/login', (req, res) => {
+    const { correo, contrasenia } = req.body;
+  
+    const contraseniamd5 = md5(contrasenia);
+  
+    const query = 'SELECT * FROM usuarios WHERE correo = ? AND contrasenia = ?';
+    db.query(query, [correo, contraseniamd5], (err, result) => {
+      if (err) {
+        return res.status(500).json({ message: 'Error en el server', error: err });
+      }
+  
+      if (result.length > 0) {
+        res.json({ success: true, message: 'Logeo exitoso', userData: result[0] }); // Devolvemos el primer usuario encontrado
+      } else {
+        // Si las credenciales no coinciden
+        res.json({ contra: contrasenia, contramd5: contraseniamd5, success: false, message: 'Correo o Contraseña invalido' });
+      }
+    });
+  });
 
 const PORT = process.env.PORT || 3001;
 
