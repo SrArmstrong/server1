@@ -7,7 +7,7 @@ const server = express();
 const SECRET_KEY = process.env.SECRET_KEY;
 const jwt = require("jsonwebtoken");
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 const rateLimit = require('express-rate-limit');
 const limiter = rateLimit({
@@ -37,7 +37,7 @@ const routes = require('./routes');
 
 server.use(
     cors({
-        origin: "http://localhost:3000",
+        origin: ["http://localhost:3000", "https://server1-gb00.onrender.com/"],
         credentials: true,
     })
 );
@@ -108,6 +108,6 @@ server.get('/', async (req,res) => {
     res.send("Conexión exitosa")
 });
 
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
     console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
