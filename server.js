@@ -1,51 +1,113 @@
+require('dotenv').config();
 const express = require('express');
-const mysql = require('mysql2');
-const bodyParser = require('body-parser');
+const admin = require('firebase-admin');
 const cors = require('cors');
-const md5 = require('md5');
+const bodyParser = require('body-parser');
+const server = express();
+const SECRET_KEY = process.env.SECRET_KEY;
+const jwt = require("jsonwebtoken");
 
-const app = express();
+const PORT = 3001;
 
-// Middleware para manejar JSON
-app.use(bodyParser.json());
-app.use(cors()); // Habilitar CORS
-
-const db = mysql.createConnection({
-  host: '69.49.241.56',
-  user: 'opticlas_SergioAldavalde',
-  password: 'Ares2021$$',
-  //password: '',
-  database: 'opticlas_digitalmindworks'
+const rateLimit = require('express-rate-limit');
+const limiter = rateLimit({
+    windowMs: 10 * 60 * 1000,
+    max: 100,
+    message: 'Too many requests from this IP, please try again after an hour'
 });
 
-db.connect((err) => {
-  if (err) {
-    console.error('Error connecting to database:', err);
-    return;
-  }
-  console.log('Connected to database');
-});
+//const serviceAccount = require('./config/firebase-key.json');
+const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_KEY, 'base64').toString('utf8'));
 
-// Ruta para mostrar usuarios
-app.get('/usuarios', (req, res) => {
-  const query = 'SELECT * FROM usuarios';
+/*
+    $fileContent = Get-Content -Path "config/firebase-key.json" -Raw
+    $base64String = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($fileContent))
+    Write-Output $base64String
+ */
 
-  db.query(query, (err, result) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: 'Error in the server', error: err });
-    }
-
-    // Envía la respuesta con los resultados formateados
-    res.status(200).json({
-      success: true,   // Indica que la operación fue exitosa
-      data: result     // Los datos de la tabla `usuarios`
+if (!admin.apps.length){
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
     });
-  });
+} else {
+    admin.app();
+}
+
+const routes = require('./routes');
+
+server.use(
+    cors({
+        origin: "http://localhost:3000",
+        credentials: true,
+    })
+);
+
+server.use(limiter);
+
+server.use(bodyParser.json());
+const db = admin.firestore();
+
+//Midellware para conocer lo que pasa por el codigo
+server.use((req, res, next) => {
+    console.log(`📡[${req.method}] ${req.url} = Body:`, req.body);
+    const startTime = Date.now();
+
+    const originalSend = res.send;
+    let statusCode;
+
+    res.send = function (body) {
+        statusCode = res.statusCode;
+        originalSend.call(this, body);
+    };
+
+    res.on('finish', async () => {
+        const logLevel = res.statusCode >= 400 ? 'error' : 'info';
+        const responseTime = Date.now() - startTime;
+        const logData = {
+            alumno: {
+                nombre: "Sergio",
+                appellidop: "Pérez",
+                appellidom: "Aldavalde",
+                grupo: "IDGS011"
+            },
+            usuario: req.user ? req.user.email : "No autenticado",
+            logLevel: logLevel,
+            timestamp: new Date(),
+            method: req.method,
+            url: req.url,
+            path: req.path,
+            query: req.query,
+            params: req.params,
+            status: statusCode || res.statusCode,
+            responseTime: responseTime,
+            userAgent: req.get('User-Agent'),
+            protocol: req.protocol,
+            hostname: req.hostname,
+            system: {
+                nodeVersion: process.version,
+                environment: process.env.NODE_ENV || 'development',
+                pid: process.pid
+            },
+        };
+
+        // Guardar logData en Firestore con una ID auto generada
+        try {
+            /*const logRef = */
+            await db.collection('INFOLOGS').add(logData); // Firestore genera la ID automáticamente
+            //console.log('Log guardado en Firestore con ID:', logRef.id); // Opcional: Mostrar la ID generada
+        } catch (error) {
+            console.error('Error al guardar en Firestore:', error);
+        }
+    });
+    next();
 });
 
-const PORT = process.env.PORT || 3001;
+server.use("/api", routes);
 
-// Iniciar el servidor
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+server.get('/', async (req,res) => {
+    res.send("Conexión exitosa")
+});
+
+server.listen(PORT, () => {
+    console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
