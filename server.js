@@ -16,8 +16,8 @@ const limiter = rateLimit({
     message: 'Too many requests from this IP, please try again after an hour'
 });
 
-//const serviceAccount = require('./config/firebase-key.json');
-const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_KEY, 'base64').toString('utf8'));
+const serviceAccount = require('./config/firebase-key.json');
+//const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_KEY, 'base64').toString('utf8'));
 
 /*
     $fileContent = Get-Content -Path "config/firebase-key.json" -Raw
@@ -64,6 +64,7 @@ server.use((req, res, next) => {
         const logLevel = res.statusCode >= 400 ? 'error' : 'info';
         const responseTime = Date.now() - startTime;
         const logData = {
+            server: "Server1",
             alumno: {
                 nombre: "Sergio",
                 appellidop: "Pérez",

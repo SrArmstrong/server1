@@ -128,6 +128,30 @@ const verifyToken = (req, res, next) => {
     });
 };
 
+router.post("/verify-token", (req, res) => {
+    const token = req.headers["authorization"];
+
+    if (!token) {
+        return res.status(403).json({ valid: false, message: "Token requerido" });
+    }
+
+    const tokenParts = token.split(" ");
+    if (tokenParts.length !== 2 || tokenParts[0] !== "Bearer") {
+        return res.status(400).json({ valid: false, message: "Formato de token inválido" });
+    }
+
+    const jwtToken = tokenParts[1];
+
+    jwt.verify(jwtToken, SECRET_KEY, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ valid: false, message: "Token inválido o expirado" });
+        }
+
+        res.json({ valid: true, message: "Token válido", user: decoded });
+    });
+});
+
+
 router.get("/getinfo", verifyToken, async (req, res) => {
     try {
         const userRef = db.collection("INFOLOGS").orderBy("timestamp", "desc"); // Ordenar por timestamp descendente
