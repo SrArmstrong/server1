@@ -189,6 +189,76 @@ router.get("/getinfo", /*verifyToken*/ async (req, res) => {
     }
 });
 
+// Nuevo endpoint para estadísticas por servidor
+router.get("/server-stats", /*verifyToken,*/ async (req, res) => {
+    try {
+        const snapshot = await db.collection("INFOLOGS").get();
+        
+        if (snapshot.empty) {
+            return res.status(404).json({
+                success: false,
+                message: "No hay logs disponibles"
+            });
+        }
+
+        const logs = snapshot.docs.map(doc => doc.data());
+        
+        // Procesamiento por servidor
+        const serverStats = {
+            Server1: getStatsForServer(logs, "Server1"),
+            Server2: getStatsForServer(logs, "Server2")
+        };
+
+        res.json({
+            success: true,
+            data: serverStats
+        });
+
+    } catch (error) {
+        console.error("Error en /server-stats:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error al procesar estadísticas por servidor"
+        });
+    }
+});
+
+// Función auxiliar para procesar logs de un servidor específico
+function getStatsForServer(logs, serverName) {
+    const serverLogs = logs.filter(log => log.server === serverName);
+    
+    return {
+        totalRequests: serverLogs.length,
+        methods: countByField(serverLogs, "method"),
+        statusCodes: countByField(serverLogs, "status"),
+        topEndpoints: getTopEndpoints(serverLogs, 5),
+        userDistribution: countByField(
+            serverLogs.map(log => log.alumno ? `${log.alumno.nombre} ${log.alumno.appellidop}` : "Anónimo"),
+            ""
+        )
+    };
+}
+
+function countByField(items, field) {
+    return items.reduce((acc, item) => {
+        const key = field ? item[field] : item;
+        acc[key] = (acc[key] || 0) + 1;
+        return acc;
+    }, {});
+}
+
+function getTopEndpoints(logs, limit) {
+    const endpoints = logs.reduce((acc, log) => {
+        acc[log.url] = (acc[log.url] || 0) + 1;
+        return acc;
+    }, {});
+
+    return Object.entries(endpoints)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, limit)
+        .map(([url, count]) => ({ url, count }));
+}
+
 router.get("/random", (req, res) => {
     const random = Math.floor(Math.random() * 100) + 1;
     res.send(`El núemero es: ${random}`);
