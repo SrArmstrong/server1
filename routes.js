@@ -152,7 +152,7 @@ router.post("/verify-token", (req, res) => {
 });
 
 
-router.get("/getinfo", verifyToken, async (req, res) => {
+router.get("/getinfo", /*verifyToken*/ async (req, res) => {
     try {
         const userRef = db.collection("INFOLOGS").orderBy("timestamp", "desc"); // Ordenar por timestamp descendente
         const snapshot = await userRef.get();
