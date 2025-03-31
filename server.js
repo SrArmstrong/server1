@@ -37,7 +37,7 @@ const routes = require('./routes');
 
 server.use(
     cors({
-        origin: ["http://localhost:3000", "https://server1-gb00.onrender.com/", "https://frontserver-1x23086zy-sergio-perez-aldavaldes-projects.vercel.app/"],
+        origin: ["http://localhost:3000", "https://server1-gb00.onrender.com", "https://frontserver-1x23086zy-sergio-perez-aldavaldes-projects.vercel.app"],
         credentials: true,
         methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["Content-Type", "Authorization"]
